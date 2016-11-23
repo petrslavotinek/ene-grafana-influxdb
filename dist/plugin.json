@@ -1,0 +1,19 @@
+{
+  "type": "datasource",
+  "name": "InfluxDB ENESA",
+  "id": "enesa-influxdb-ds",
+
+  "defaultMatchFormat": "regex values",
+  "metrics": true,
+  "annotations": true,
+
+  "info": {
+    "author": {
+      "name": "ENESA a.s."
+    },
+    "logos": {
+      "small": "img/influxdb_logo.svg",
+      "large": "img/influxdb_logo.svg"
+    }
+  }
+}
