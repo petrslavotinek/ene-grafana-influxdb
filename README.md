@@ -1,4 +1,4 @@
-# InfluxDB Custom Datasource -  Native Plugin
+# InfluxDB Custom Datasource
 
 Same as native InfluxDB datasource.
 
