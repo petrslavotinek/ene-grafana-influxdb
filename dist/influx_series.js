@@ -36,7 +36,7 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
         };
       }();
 
-      _export('EneInfluxSeries', EneInfluxSeries = function () {
+      EneInfluxSeries = function () {
         function EneInfluxSeries(options) {
           _classCallCheck(this, EneInfluxSeries);
 
@@ -169,7 +169,7 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
         }, {
           key: 'getTable',
           value: function getTable(includeMeasurementColumn) {
-            var table = new TableModel.default();
+            var table = new TableModel();
             var self = this;
             var i, j;
 
@@ -219,9 +219,9 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
         }]);
 
         return EneInfluxSeries;
-      }());
+      }();
 
-      _export('EneInfluxSeries', EneInfluxSeries);
+      _export('default', EneInfluxSeries);
     }
   };
 });

@@ -1,7 +1,7 @@
 import _ from 'lodash';
 import TableModel from 'app/core/table_model';
 
-export class EneInfluxSeries {
+export default class EneInfluxSeries {
  constructor(options) {
     this.series = options.series;
     this.alias = options.alias;
@@ -105,7 +105,7 @@ export class EneInfluxSeries {
   }
 
   getTable(includeMeasurementColumn) {
-    var table = new TableModel.default();
+    var table = new TableModel();
     var self = this;
     var i, j;
 

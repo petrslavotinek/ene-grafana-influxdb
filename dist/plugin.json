@@ -1,7 +1,7 @@
 {
   "type": "datasource",
   "name": "InfluxDB ENESA",
-  "id": "enesa-influxdb-ds",
+  "id": "enesa-influxdb-datasource",
 
   "defaultMatchFormat": "regex values",
   "metrics": true,

@@ -61,13 +61,15 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
             return url.trim();
           });
 
-          this.username = instanceSettings.username;
-          this.password = instanceSettings.password;
+          var jsonData = instanceSettings.jsonData || {};
+
+          this.username = jsonData.username;
+          this.password = jsonData.password;
           this.name = instanceSettings.name;
-          this.database = instanceSettings.database;
+          this.database = jsonData.database;
           this.basicAuth = instanceSettings.basicAuth;
           this.withCredentials = instanceSettings.withCredentials;
-          this.interval = (instanceSettings.jsonData || {}).timeInterval;
+          this.interval = jsonData.timeInterval;
           this.supportAnnotations = true;
           this.supportMetrics = true;
           this.responseParser = new EneResponseParser();

@@ -34,6 +34,7 @@ System.register(['lodash'], function (_export, _context) {
 
     return str + '"' + tag.key + '" ' + operator + ' ' + value;
   }
+
   return {
     setters: [function (_lodash) {
       _ = _lodash.default;
@@ -57,7 +58,7 @@ System.register(['lodash'], function (_export, _context) {
         };
       }();
 
-      _export('EneInfluxQueryBuilder', EneInfluxQueryBuilder = function () {
+      EneInfluxQueryBuilder = function () {
         function EneInfluxQueryBuilder(target, database) {
           _classCallCheck(this, EneInfluxQueryBuilder);
 
@@ -126,9 +127,9 @@ System.register(['lodash'], function (_export, _context) {
         }]);
 
         return EneInfluxQueryBuilder;
-      }());
+      }();
 
-      _export('EneInfluxQueryBuilder', EneInfluxQueryBuilder);
+      _export('default', EneInfluxQueryBuilder);
     }
   };
 });
