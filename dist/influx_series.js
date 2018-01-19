@@ -3,7 +3,7 @@
 System.register(['lodash', 'app/core/table_model'], function (_export, _context) {
   "use strict";
 
-  var _, TableModel, _createClass, EneInfluxSeries;
+  var _, TableModel, _createClass, InfluxSeries;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -36,27 +36,28 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
         };
       }();
 
-      EneInfluxSeries = function () {
-        function EneInfluxSeries(options) {
-          _classCallCheck(this, EneInfluxSeries);
+      InfluxSeries = function () {
+        function InfluxSeries(options) {
+          _classCallCheck(this, InfluxSeries);
 
           this.series = options.series;
           this.alias = options.alias;
           this.annotation = options.annotation;
         }
 
-        _createClass(EneInfluxSeries, [{
+        _createClass(InfluxSeries, [{
           key: 'getTimeSeries',
           value: function getTimeSeries() {
+            var _this = this;
+
             var output = [];
-            var self = this;
             var i, j;
 
-            if (self.series.length === 0) {
+            if (this.series.length === 0) {
               return output;
             }
 
-            _.each(self.series, function (series) {
+            _.each(this.series, function (series) {
               var columns = series.columns.length;
               var tags = _.map(series.tags, function (value, key) {
                 return key + ': ' + value;
@@ -69,8 +70,8 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
                   seriesName = seriesName + '.' + columnName;
                 }
 
-                if (self.alias) {
-                  seriesName = self._getSeriesName(series, j);
+                if (_this.alias) {
+                  seriesName = _this._getSeriesName(series, j);
                 } else if (series.tags) {
                   seriesName = seriesName + ' {' + tags.join(', ') + '}';
                 }
@@ -121,18 +122,20 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
         }, {
           key: 'getAnnotations',
           value: function getAnnotations() {
+            var _this2 = this;
+
             var list = [];
-            var self = this;
 
             _.each(this.series, function (series) {
               var titleCol = null;
               var timeCol = null;
-              var tagsCol = null;
+              var tagsCol = [];
               var textCol = null;
 
               _.each(series.columns, function (column, index) {
                 if (column === 'time') {
-                  timeCol = index;return;
+                  timeCol = index;
+                  return;
                 }
                 if (column === 'sequence_number') {
                   return;
@@ -140,23 +143,31 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
                 if (!titleCol) {
                   titleCol = index;
                 }
-                if (column === self.annotation.titleColumn) {
-                  titleCol = index;return;
+                if (column === _this2.annotation.titleColumn) {
+                  titleCol = index;
+                  return;
                 }
-                if (column === self.annotation.tagsColumn) {
-                  tagsCol = index;return;
+                if (_.includes((_this2.annotation.tagsColumn || '').replace(' ', '').split(','), column)) {
+                  tagsCol.push(index);
+                  return;
                 }
-                if (column === self.annotation.textColumn) {
-                  textCol = index;return;
+                if (column === _this2.annotation.textColumn) {
+                  textCol = index;
+                  return;
                 }
               });
 
               _.each(series.values, function (value) {
                 var data = {
-                  annotation: self.annotation,
+                  annotation: _this2.annotation,
                   time: +new Date(value[timeCol]),
                   title: value[titleCol],
-                  tags: value[tagsCol],
+                  // Remove empty values, then split in different tags for comma separated values
+                  tags: _.flatten(tagsCol.filter(function (t) {
+                    return value[t];
+                  }).map(function (t) {
+                    return value[t].split(',');
+                  })),
                   text: value[textCol]
                 };
 
@@ -170,15 +181,13 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
           key: 'getTable',
           value: function getTable(includeMeasurementColumn) {
             var table = new TableModel();
-            var self = this;
             var i, j;
 
-            if (self.series.length === 0) {
+            if (this.series.length === 0) {
               return table;
             }
 
-            _.each(self.series, function (series, seriesIndex) {
-
+            _.each(this.series, function (series, seriesIndex) {
               if (seriesIndex === 0) {
                 table.columns.push({ text: 'Time', type: 'time' });
                 if (includeMeasurementColumn) {
@@ -218,10 +227,10 @@ System.register(['lodash', 'app/core/table_model'], function (_export, _context)
           }
         }]);
 
-        return EneInfluxSeries;
+        return InfluxSeries;
       }();
 
-      _export('default', EneInfluxSeries);
+      _export('default', InfluxSeries);
     }
   };
 });

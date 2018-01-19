@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['lodash', 'app/core/components/query_part/query_part'], function (_export, _context) {
+System.register(['lodash', './query_part_helpers'], function (_export, _context) {
   "use strict";
 
-  var _, QueryPartDef, QueryPart, functionRenderer, suffixRenderer, identityRenderer, quotedIdentityRenderer, index, categories, groupByTimeFunctions;
+  var _, QueryPartDef, QueryPart, functionRenderer, suffixRenderer, index, categories, groupByTimeFunctions;
 
   function createPart(part) {
     var def = index[part.type];
@@ -69,7 +69,7 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
         return;
       }
       // if next to last is math, replace it
-      if (selectParts[partCount - 2].def.type === 'math') {
+      if (partCount > 1 && selectParts[partCount - 2].def.type === 'math') {
         selectParts[partCount - 2] = partModel;
         return;
       } else if (selectParts[partCount - 1].def.type === 'alias') {
@@ -105,13 +105,11 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
   return {
     setters: [function (_lodash) {
       _ = _lodash.default;
-    }, function (_appCoreComponentsQuery_partQuery_part) {
-      QueryPartDef = _appCoreComponentsQuery_partQuery_part.QueryPartDef;
-      QueryPart = _appCoreComponentsQuery_partQuery_part.QueryPart;
-      functionRenderer = _appCoreComponentsQuery_partQuery_part.functionRenderer;
-      suffixRenderer = _appCoreComponentsQuery_partQuery_part.suffixRenderer;
-      identityRenderer = _appCoreComponentsQuery_partQuery_part.identityRenderer;
-      quotedIdentityRenderer = _appCoreComponentsQuery_partQuery_part.quotedIdentityRenderer;
+    }, function (_query_part_helpers) {
+      QueryPartDef = _query_part_helpers.QueryPartDef;
+      QueryPart = _query_part_helpers.QueryPart;
+      functionRenderer = _query_part_helpers.functionRenderer;
+      suffixRenderer = _query_part_helpers.suffixRenderer;
     }],
     execute: function () {
       index = [];
@@ -119,11 +117,12 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
         Aggregations: [],
         Selectors: [],
         Transformations: [],
+        Predictors: [],
         Math: [],
         Aliasing: [],
         Fields: []
       };
-      ;groupByTimeFunctions = [];
+      groupByTimeFunctions = [];
       register({
         type: 'field',
         addStrategy: addFieldStrategy,
@@ -180,6 +179,15 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
       });
 
       register({
+        type: 'mode',
+        addStrategy: replaceAggregationAddStrategy,
+        category: categories.Aggregations,
+        params: [],
+        defaultParams: [],
+        renderer: functionRenderer
+      });
+
+      register({
         type: 'sum',
         addStrategy: replaceAggregationAddStrategy,
         category: categories.Aggregations,
@@ -194,7 +202,11 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
         type: 'derivative',
         addStrategy: addTransformationStrategy,
         category: categories.Transformations,
-        params: [{ name: "duration", type: "interval", options: ['1s', '10s', '1m', '5m', '10m', '15m', '1h'] }],
+        params: [{
+          name: 'duration',
+          type: 'interval',
+          options: ['1s', '10s', '1m', '5m', '10m', '15m', '1h']
+        }],
         defaultParams: ['10s'],
         renderer: functionRenderer
       });
@@ -212,7 +224,11 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
         type: 'non_negative_derivative',
         addStrategy: addTransformationStrategy,
         category: categories.Transformations,
-        params: [{ name: "duration", type: "interval", options: ['1s', '10s', '1m', '5m', '10m', '15m', '1h'] }],
+        params: [{
+          name: 'duration',
+          type: 'interval',
+          options: ['1s', '10s', '1m', '5m', '10m', '15m', '1h']
+        }],
         defaultParams: ['10s'],
         renderer: functionRenderer
       });
@@ -227,11 +243,29 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
       });
 
       register({
+        type: 'non_negative_difference',
+        addStrategy: addTransformationStrategy,
+        category: categories.Transformations,
+        params: [],
+        defaultParams: [],
+        renderer: functionRenderer
+      });
+
+      register({
         type: 'moving_average',
         addStrategy: addTransformationStrategy,
         category: categories.Transformations,
-        params: [{ name: "window", type: "number", options: [5, 10, 20, 30, 40] }],
+        params: [{ name: 'window', type: 'int', options: [5, 10, 20, 30, 40] }],
         defaultParams: [10],
+        renderer: functionRenderer
+      });
+
+      register({
+        type: 'cumulative_sum',
+        addStrategy: addTransformationStrategy,
+        category: categories.Transformations,
+        params: [],
+        defaultParams: [],
         renderer: functionRenderer
       });
 
@@ -247,15 +281,23 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
       register({
         type: 'time',
         category: groupByTimeFunctions,
-        params: [{ name: "interval", type: "time", options: ['auto', '1s', '10s', '1m', '5m', '10m', '15m', '1h'] }],
-        defaultParams: ['auto'],
+        params: [{
+          name: 'interval',
+          type: 'time',
+          options: ['$__interval', '1s', '10s', '1m', '5m', '10m', '15m', '1h']
+        }],
+        defaultParams: ['$__interval'],
         renderer: functionRenderer
       });
 
       register({
         type: 'fill',
         category: groupByTimeFunctions,
-        params: [{ name: "fill", type: "string", options: ['none', 'null', '0', 'previous'] }],
+        params: [{
+          name: 'fill',
+          type: 'string',
+          options: ['none', 'null', '0', 'previous', 'linear']
+        }],
         defaultParams: ['null'],
         renderer: functionRenderer
       });
@@ -264,8 +306,31 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
         type: 'elapsed',
         addStrategy: addTransformationStrategy,
         category: categories.Transformations,
-        params: [{ name: "duration", type: "interval", options: ['1s', '10s', '1m', '5m', '10m', '15m', '1h'] }],
+        params: [{
+          name: 'duration',
+          type: 'interval',
+          options: ['1s', '10s', '1m', '5m', '10m', '15m', '1h']
+        }],
         defaultParams: ['10s'],
+        renderer: functionRenderer
+      });
+
+      // predictions
+      register({
+        type: 'holt_winters',
+        addStrategy: addTransformationStrategy,
+        category: categories.Predictors,
+        params: [{ name: 'number', type: 'int', options: [5, 10, 20, 30, 40] }, { name: 'season', type: 'int', options: [0, 1, 2, 5, 10] }],
+        defaultParams: [10, 2],
+        renderer: functionRenderer
+      });
+
+      register({
+        type: 'holt_winters_with_fit',
+        addStrategy: addTransformationStrategy,
+        category: categories.Predictors,
+        params: [{ name: 'number', type: 'int', options: [5, 10, 20, 30, 40] }, { name: 'season', type: 'int', options: [0, 1, 2, 5, 10] }],
+        defaultParams: [10, 2],
         renderer: functionRenderer
       });
 
@@ -345,7 +410,7 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
         type: 'math',
         addStrategy: addMathStrategy,
         category: categories.Math,
-        params: [{ name: "expr", type: "string" }],
+        params: [{ name: 'expr', type: 'string' }],
         defaultParams: [' / 100'],
         renderer: suffixRenderer
       });
@@ -354,7 +419,7 @@ System.register(['lodash', 'app/core/components/query_part/query_part'], functio
         type: 'alias',
         addStrategy: addAliasStrategy,
         category: categories.Aliasing,
-        params: [{ name: "name", type: "string", quote: 'double' }],
+        params: [{ name: 'name', type: 'string', quote: 'double' }],
         defaultParams: ['alias'],
         renderMode: 'suffix',
         renderer: aliasRenderer

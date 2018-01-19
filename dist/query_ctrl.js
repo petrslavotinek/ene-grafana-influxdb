@@ -3,7 +3,7 @@
 System.register(['angular', 'lodash', './query_builder', './influx_query', './query_part', 'app/plugins/sdk'], function (_export, _context) {
   "use strict";
 
-  var angular, _, EneInfluxQueryBuilder, EneInfluxQuery, queryPart, QueryCtrl, _createClass, EneInfluxQueryCtrl;
+  var angular, _, InfluxQueryBuilder, InfluxQuery, queryPart, QueryCtrl, _createClass, EnesaInfluxQueryCtrl;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -41,9 +41,9 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
     }, function (_lodash) {
       _ = _lodash.default;
     }, function (_query_builder) {
-      EneInfluxQueryBuilder = _query_builder.default;
+      InfluxQueryBuilder = _query_builder.InfluxQueryBuilder;
     }, function (_influx_query) {
-      EneInfluxQuery = _influx_query.default;
+      InfluxQuery = _influx_query.default;
     }, function (_query_part) {
       queryPart = _query_part.default;
     }, function (_appPluginsSdk) {
@@ -68,24 +68,24 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
         };
       }();
 
-      _export('EneInfluxQueryCtrl', EneInfluxQueryCtrl = function (_QueryCtrl) {
-        _inherits(EneInfluxQueryCtrl, _QueryCtrl);
+      _export('EnesaInfluxQueryCtrl', EnesaInfluxQueryCtrl = function (_QueryCtrl) {
+        _inherits(EnesaInfluxQueryCtrl, _QueryCtrl);
 
         /** @ngInject **/
-        function EneInfluxQueryCtrl($scope, $injector, templateSrv, $q, uiSegmentSrv) {
-          _classCallCheck(this, EneInfluxQueryCtrl);
+        function EnesaInfluxQueryCtrl($scope, $injector, templateSrv, $q, uiSegmentSrv) {
+          _classCallCheck(this, EnesaInfluxQueryCtrl);
 
-          var _this = _possibleConstructorReturn(this, (EneInfluxQueryCtrl.__proto__ || Object.getPrototypeOf(EneInfluxQueryCtrl)).call(this, $scope, $injector));
+          var _this = _possibleConstructorReturn(this, (EnesaInfluxQueryCtrl.__proto__ || Object.getPrototypeOf(EnesaInfluxQueryCtrl)).call(this, $scope, $injector));
 
-          _this.templateSrv = templateSrv;
+          // this.$scope = $scope;
+          // this.$injector = $injector;
           _this.$q = $q;
+          _this.templateSrv = templateSrv;
           _this.uiSegmentSrv = uiSegmentSrv;
-          _this.target = _this.target;
-          _this.queryModel = new EneInfluxQuery(_this.target, templateSrv, _this.panel.scopedVars);
-          _this.queryBuilder = new EneInfluxQueryBuilder(_this.target, _this.datasource.database);
-          _this.groupBySegment = _this.uiSegmentSrv.newPlusButton();
+          _this.queryModel = new InfluxQuery(_this.target, templateSrv, _this.panel.scopedVars);
+          _this.queryBuilder = new InfluxQueryBuilder(_this.target, _this.datasource.database);
+          _this.groupBySegment = uiSegmentSrv.newPlusButton();
           _this.resultFormats = [{ text: 'Time series', value: 'time_series' }, { text: 'Table', value: 'table' }];
-
           _this.policySegment = uiSegmentSrv.newSegment(_this.target.policy);
 
           if (!_this.target.measurement) {
@@ -105,7 +105,7 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
 
               if (!tag.operator) {
                 if (/^\/.*\/$/.test(tag.value)) {
-                  tag.operator = "=~";
+                  tag.operator = '=~';
                 } else {
                   tag.operator = '=';
                 }
@@ -136,11 +136,19 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
 
           _this.fixTagSegments();
           _this.buildSelectMenu();
-          _this.removeTagFilterSegment = uiSegmentSrv.newSegment({ fake: true, value: '-- remove tag filter --' });
+          _this.removeTagFilterSegment = uiSegmentSrv.newSegment({
+            fake: true,
+            value: '-- remove tag filter --'
+          });
           return _this;
         }
 
-        _createClass(EneInfluxQueryCtrl, [{
+        _createClass(EnesaInfluxQueryCtrl, [{
+          key: 'removeOrderByTime',
+          value: function removeOrderByTime() {
+            this.target.orderByTime = 'ASC';
+          }
+        }, {
           key: 'buildSelectMenu',
           value: function buildSelectMenu() {
             var categories = queryPart.getCategories();
@@ -166,6 +174,15 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
               var options = [];
               if (!_this2.queryModel.hasFill()) {
                 options.push(_this2.uiSegmentSrv.newSegment({ value: 'fill(null)' }));
+              }
+              if (!_this2.target.limit) {
+                options.push(_this2.uiSegmentSrv.newSegment({ value: 'LIMIT' }));
+              }
+              if (!_this2.target.slimit) {
+                options.push(_this2.uiSegmentSrv.newSegment({ value: 'SLIMIT' }));
+              }
+              if (_this2.target.orderByTime === 'ASC') {
+                options.push(_this2.uiSegmentSrv.newSegment({ value: 'ORDER BY time DESC' }));
               }
               if (!_this2.queryModel.hasGroupByTime()) {
                 options.push(_this2.uiSegmentSrv.newSegment({ value: 'time($interval)' }));
@@ -201,7 +218,28 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
         }, {
           key: 'groupByAction',
           value: function groupByAction() {
-            this.queryModel.addGroupBy(this.groupBySegment.value);
+            switch (this.groupBySegment.value) {
+              case 'LIMIT':
+                {
+                  this.target.limit = 10;
+                  break;
+                }
+              case 'SLIMIT':
+                {
+                  this.target.slimit = 10;
+                  break;
+                }
+              case 'ORDER BY time DESC':
+                {
+                  this.target.orderByTime = 'DESC';
+                  break;
+                }
+              default:
+                {
+                  this.queryModel.addGroupBy(this.groupBySegment.value);
+                }
+            }
+
             var plusButton = this.uiSegmentSrv.newPlusButton();
             this.groupBySegment.value = plusButton.value;
             this.groupBySegment.html = plusButton.html;
@@ -217,23 +255,23 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
           key: 'handleSelectPartEvent',
           value: function handleSelectPartEvent(selectParts, part, evt) {
             switch (evt.name) {
-              case "get-param-options":
+              case 'get-param-options':
                 {
                   var fieldsQuery = this.queryBuilder.buildExploreQuery('FIELDS');
                   return this.datasource.metricFindQuery(fieldsQuery).then(this.transformToSegments(true)).catch(this.handleQueryError.bind(this));
                 }
-              case "part-param-changed":
+              case 'part-param-changed':
                 {
                   this.panelCtrl.refresh();
                   break;
                 }
-              case "action":
+              case 'action':
                 {
                   this.queryModel.removeSelectPart(selectParts, part);
                   this.panelCtrl.refresh();
                   break;
                 }
-              case "get-part-actions":
+              case 'get-part-actions':
                 {
                   return this.$q.when([{ text: 'Remove', value: 'remove-part' }]);
                 }
@@ -243,23 +281,23 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
           key: 'handleGroupByPartEvent',
           value: function handleGroupByPartEvent(part, index, evt) {
             switch (evt.name) {
-              case "get-param-options":
+              case 'get-param-options':
                 {
                   var tagsQuery = this.queryBuilder.buildExploreQuery('TAG_KEYS');
                   return this.datasource.metricFindQuery(tagsQuery).then(this.transformToSegments(true)).catch(this.handleQueryError.bind(this));
                 }
-              case "part-param-changed":
+              case 'part-param-changed':
                 {
                   this.panelCtrl.refresh();
                   break;
                 }
-              case "action":
+              case 'action':
                 {
                   this.queryModel.removeGroupByPart(part, index);
                   this.panelCtrl.refresh();
                   break;
                 }
-              case "get-part-actions":
+              case 'get-part-actions':
                 {
                   return this.$q.when([{ text: 'Remove', value: 'remove-part' }]);
                 }
@@ -322,7 +360,10 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
 
             return function (results) {
               var segments = _.map(results, function (segment) {
-                return _this3.uiSegmentSrv.newSegment({ value: segment.text, expandable: segment.expandable });
+                return _this3.uiSegmentSrv.newSegment({
+                  value: segment.text,
+                  expandable: segment.expandable
+                });
               });
 
               if (addTemplateVars) {
@@ -334,7 +375,11 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
                   for (var _iterator3 = _this3.templateSrv.variables[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
                     var variable = _step3.value;
 
-                    segments.unshift(_this3.uiSegmentSrv.newSegment({ type: 'template', value: '/^$' + variable.name + '$/', expandable: true }));
+                    segments.unshift(_this3.uiSegmentSrv.newSegment({
+                      type: 'template',
+                      value: '/^$' + variable.name + '$/',
+                      expandable: true
+                    }));
                   }
                 } catch (err) {
                   _didIteratorError3 = true;
@@ -435,7 +480,7 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
 
             var tags = [];
             var tagIndex = 0;
-            var tagOperator = "";
+            var tagOperator = '';
 
             _.each(this.tagSegments, function (segment2, index) {
               if (segment2.type === 'key') {
@@ -469,6 +514,7 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
             } else if ((tagOperator === '=~' || tagOperator === '!~') && /^(?!\/.*\/$)/.test(tagValue)) {
               return '=';
             }
+            return null;
           }
         }, {
           key: 'getCollapsedText',
@@ -477,12 +523,12 @@ System.register(['angular', 'lodash', './query_builder', './influx_query', './qu
           }
         }]);
 
-        return EneInfluxQueryCtrl;
+        return EnesaInfluxQueryCtrl;
       }(QueryCtrl));
 
-      _export('EneInfluxQueryCtrl', EneInfluxQueryCtrl);
+      _export('EnesaInfluxQueryCtrl', EnesaInfluxQueryCtrl);
 
-      EneInfluxQueryCtrl.templateUrl = 'partials/query.editor.html';
+      EnesaInfluxQueryCtrl.templateUrl = 'partials/query.editor.html';
     }
   };
 });

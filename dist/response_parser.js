@@ -3,7 +3,7 @@
 System.register(['lodash'], function (_export, _context) {
   "use strict";
 
-  var _, _createClass, EneResponseParser;
+  var _, _createClass, ResponseParser;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -37,12 +37,12 @@ System.register(['lodash'], function (_export, _context) {
         };
       }();
 
-      EneResponseParser = function () {
-        function EneResponseParser() {
-          _classCallCheck(this, EneResponseParser);
+      ResponseParser = function () {
+        function ResponseParser() {
+          _classCallCheck(this, ResponseParser);
         }
 
-        _createClass(EneResponseParser, [{
+        _createClass(ResponseParser, [{
           key: 'parse',
           value: function parse(query, results) {
             if (!results || results.results.length === 0) {
@@ -77,10 +77,10 @@ System.register(['lodash'], function (_export, _context) {
           }
         }]);
 
-        return EneResponseParser;
+        return ResponseParser;
       }();
 
-      _export('default', EneResponseParser);
+      _export('default', ResponseParser);
     }
   };
 });

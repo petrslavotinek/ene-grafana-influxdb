@@ -1,24 +1,17 @@
-import EneInfluxDatasource from './datasource';
-import {EneInfluxQueryCtrl} from './query_ctrl';
+import EnesaInfluxDatasource from './datasource';
+import { EnesaInfluxQueryCtrl } from './query_ctrl';
 
-class EneInfluxConfigCtrl {
+class EnesaInfluxConfigCtrl {
   static templateUrl = 'partials/config.html';
 }
 
-class EneInfluxQueryOptionsCtrl {
-  static templateUrl = 'partials/query.options.html';
-}
-
-class EneInfluxAnnotationsQueryCtrl {
+class EnesaInfluxAnnotationsQueryCtrl {
   static templateUrl = 'partials/annotations.editor.html';
 }
 
 export {
-  EneInfluxDatasource as Datasource,
-  EneInfluxQueryCtrl as QueryCtrl,
-  EneInfluxConfigCtrl as ConfigCtrl,
-  EneInfluxQueryOptionsCtrl as QueryOptionsCtrl,
-  EneInfluxAnnotationsQueryCtrl as AnnotationsQueryCtrl,
+  EnesaInfluxDatasource as Datasource,
+  EnesaInfluxQueryCtrl as QueryCtrl,
+  EnesaInfluxConfigCtrl as ConfigCtrl,
+  EnesaInfluxAnnotationsQueryCtrl as AnnotationsQueryCtrl,
 };
-
-

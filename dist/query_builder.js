@@ -3,7 +3,7 @@
 System.register(['lodash'], function (_export, _context) {
   "use strict";
 
-  var _, _createClass, EneInfluxQueryBuilder;
+  var _, _createClass, InfluxQueryBuilder;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -12,7 +12,7 @@ System.register(['lodash'], function (_export, _context) {
   }
 
   function renderTagCondition(tag, index) {
-    var str = "";
+    var str = '';
     var operator = tag.operator;
     var value = tag.value;
     if (index > 0) {
@@ -58,39 +58,48 @@ System.register(['lodash'], function (_export, _context) {
         };
       }();
 
-      EneInfluxQueryBuilder = function () {
-        function EneInfluxQueryBuilder(target, database) {
-          _classCallCheck(this, EneInfluxQueryBuilder);
+      _export('InfluxQueryBuilder', InfluxQueryBuilder = function () {
+        function InfluxQueryBuilder(target, database) {
+          _classCallCheck(this, InfluxQueryBuilder);
 
           this.target = target;
           this.database = database;
         }
 
-        _createClass(EneInfluxQueryBuilder, [{
-          key: 'build',
-          value: function build() {
-            return this.target.rawQuery ? this._modifyRawQuery() : this._buildQuery();
-          }
-        }, {
+        _createClass(InfluxQueryBuilder, [{
           key: 'buildExploreQuery',
           value: function buildExploreQuery(type, withKey, withMeasurementFilter) {
             var query;
             var measurement;
+            var policy;
 
             if (type === 'TAG_KEYS') {
               query = 'SHOW TAG KEYS';
               measurement = this.target.measurement;
+              policy = this.target.policy;
             } else if (type === 'TAG_VALUES') {
               query = 'SHOW TAG VALUES';
               measurement = this.target.measurement;
+              policy = this.target.policy;
             } else if (type === 'MEASUREMENTS') {
               query = 'SHOW MEASUREMENTS';
               if (withMeasurementFilter) {
                 query += ' WITH MEASUREMENT =~ /' + withMeasurementFilter + '/';
               }
             } else if (type === 'FIELDS') {
-              query = 'SHOW FIELD KEYS FROM "' + this.target.measurement + '"';
-              return query;
+              measurement = this.target.measurement;
+              policy = this.target.policy;
+
+              if (!measurement.match('^/.*/')) {
+                measurement = '"' + measurement + '"';
+
+                if (policy && policy !== 'default') {
+                  policy = '"' + policy + '"';
+                  measurement = policy + '.' + measurement;
+                }
+              }
+
+              return 'SHOW FIELD KEYS FROM ' + measurement;
             } else if (type === 'RETENTION POLICIES') {
               query = 'SHOW RETENTION POLICIES on "' + this.database + '"';
               return query;
@@ -100,6 +109,12 @@ System.register(['lodash'], function (_export, _context) {
               if (!measurement.match('^/.*/') && !measurement.match(/^merge\(.*\)/)) {
                 measurement = '"' + measurement + '"';
               }
+
+              if (policy && policy !== 'default') {
+                policy = '"' + policy + '"';
+                measurement = policy + '.' + measurement;
+              }
+
               query += ' FROM ' + measurement;
             }
 
@@ -121,15 +136,20 @@ System.register(['lodash'], function (_export, _context) {
                 query += ' WHERE ' + whereConditions.join(' ');
               }
             }
-
+            if (type === 'MEASUREMENTS') {
+              query += ' LIMIT 100';
+              //Solve issue #2524 by limiting the number of measurements returned
+              //LIMIT must be after WITH MEASUREMENT and WHERE clauses
+              //This also could be used for TAG KEYS and TAG VALUES, if desired
+            }
             return query;
           }
         }]);
 
-        return EneInfluxQueryBuilder;
-      }();
+        return InfluxQueryBuilder;
+      }());
 
-      _export('default', EneInfluxQueryBuilder);
+      _export('InfluxQueryBuilder', InfluxQueryBuilder);
     }
   };
 });

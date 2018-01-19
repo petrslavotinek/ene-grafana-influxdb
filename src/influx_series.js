@@ -1,8 +1,12 @@
 import _ from 'lodash';
 import TableModel from 'app/core/table_model';
 
-export default class EneInfluxSeries {
- constructor(options) {
+export default class InfluxSeries {
+  series;
+  alias;
+  annotation;
+
+  constructor(options) {
     this.series = options.series;
     this.alias = options.alias;
     this.annotation = options.annotation;
@@ -10,14 +14,13 @@ export default class EneInfluxSeries {
 
   getTimeSeries() {
     var output = [];
-    var self = this;
     var i, j;
 
-    if (self.series.length === 0) {
+    if (this.series.length === 0) {
       return output;
     }
 
-    _.each(self.series, function(series) {
+    _.each(this.series, series => {
       var columns = series.columns.length;
       var tags = _.map(series.tags, function(value, key) {
         return key + ': ' + value;
@@ -30,8 +33,8 @@ export default class EneInfluxSeries {
           seriesName = seriesName + '.' + columnName;
         }
 
-        if (self.alias) {
-          seriesName = self._getSeriesName(series, j);
+        if (this.alias) {
+          seriesName = this._getSeriesName(series, j);
         } else if (series.tags) {
           seriesName = seriesName + ' {' + tags.join(', ') + '}';
         }
@@ -43,7 +46,7 @@ export default class EneInfluxSeries {
           }
         }
 
-        output.push({ target: seriesName, datapoints: datapoints});
+        output.push({ target: seriesName, datapoints: datapoints });
       }
     });
 
@@ -58,43 +61,77 @@ export default class EneInfluxSeries {
       var group = g1 || g2;
       var segIndex = parseInt(group, 10);
 
-      if (group === 'm' || group === 'measurement') { return series.name; }
-      if (group === 'col') { return series.columns[index]; }
-      if (!isNaN(segIndex)) { return segments[segIndex]; }
-      if (group.indexOf('tag_') !== 0) { return match; }
+      if (group === 'm' || group === 'measurement') {
+        return series.name;
+      }
+      if (group === 'col') {
+        return series.columns[index];
+      }
+      if (!isNaN(segIndex)) {
+        return segments[segIndex];
+      }
+      if (group.indexOf('tag_') !== 0) {
+        return match;
+      }
 
       var tag = group.replace('tag_', '');
-      if (!series.tags) { return match; }
+      if (!series.tags) {
+        return match;
+      }
       return series.tags[tag];
     });
   }
 
   getAnnotations() {
     var list = [];
-    var self = this;
 
-    _.each(this.series, function (series) {
+    _.each(this.series, series => {
       var titleCol = null;
       var timeCol = null;
-      var tagsCol = null;
+      var tagsCol = [];
       var textCol = null;
 
-      _.each(series.columns, function(column, index) {
-        if (column === 'time') { timeCol = index; return; }
-        if (column === 'sequence_number') { return; }
-        if (!titleCol) { titleCol = index; }
-        if (column === self.annotation.titleColumn) { titleCol = index; return; }
-        if (column === self.annotation.tagsColumn) { tagsCol = index; return; }
-        if (column === self.annotation.textColumn) { textCol = index; return; }
+      _.each(series.columns, (column, index) => {
+        if (column === 'time') {
+          timeCol = index;
+          return;
+        }
+        if (column === 'sequence_number') {
+          return;
+        }
+        if (!titleCol) {
+          titleCol = index;
+        }
+        if (column === this.annotation.titleColumn) {
+          titleCol = index;
+          return;
+        }
+        if (_.includes((this.annotation.tagsColumn || '').replace(' ', '').split(','), column)) {
+          tagsCol.push(index);
+          return;
+        }
+        if (column === this.annotation.textColumn) {
+          textCol = index;
+          return;
+        }
       });
 
-      _.each(series.values, function (value) {
+      _.each(series.values, value => {
         var data = {
-          annotation: self.annotation,
-          time: + new Date(value[timeCol]),
+          annotation: this.annotation,
+          time: +new Date(value[timeCol]),
           title: value[titleCol],
-          tags: value[tagsCol],
-          text: value[textCol]
+          // Remove empty values, then split in different tags for comma separated values
+          tags: _.flatten(
+            tagsCol
+              .filter(function(t) {
+                return value[t];
+              })
+              .map(function(t) {
+                return value[t].split(',');
+              })
+          ),
+          text: value[textCol],
         };
 
         list.push(data);
@@ -106,25 +143,23 @@ export default class EneInfluxSeries {
 
   getTable(includeMeasurementColumn) {
     var table = new TableModel();
-    var self = this;
     var i, j;
 
-    if (self.series.length === 0) {
+    if (this.series.length === 0) {
       return table;
     }
 
-    _.each(self.series, function(series, seriesIndex) {
-
+    _.each(this.series, (series, seriesIndex) => {
       if (seriesIndex === 0) {
-        table.columns.push({text: 'Time', type: 'time'});
+        table.columns.push({ text: 'Time', type: 'time' });
         if (includeMeasurementColumn) {
           table.columns.push({text: 'Measurement'});
         }
         _.each(_.keys(series.tags), function(key) {
-          table.columns.push({text: key});
+          table.columns.push({ text: key });
         });
         for (j = 1; j < series.columns.length; j++) {
-          table.columns.push({text: series.columns[j]});
+          table.columns.push({ text: series.columns[j] });
         }
       }
 

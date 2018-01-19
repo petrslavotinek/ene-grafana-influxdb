@@ -3,7 +3,7 @@
 System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_export, _context) {
   "use strict";
 
-  var _, queryPart, kbn, _createClass, EneInfluxQuery;
+  var _, queryPart, kbn, _createClass, InfluxQuery;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -38,27 +38,27 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
         };
       }();
 
-      EneInfluxQuery = function () {
+      InfluxQuery = function () {
 
         /** @ngInject */
-        function EneInfluxQuery(target, templateSrv, scopedVars) {
-          _classCallCheck(this, EneInfluxQuery);
+        function InfluxQuery(target, templateSrv, scopedVars) {
+          _classCallCheck(this, InfluxQuery);
 
           this.target = target;
           this.templateSrv = templateSrv;
           this.scopedVars = scopedVars;
 
           target.policy = target.policy || 'default';
-          target.dsType = 'influxdb';
           target.resultFormat = target.resultFormat || 'time_series';
+          target.orderByTime = target.orderByTime || 'ASC';
           target.tags = target.tags || [];
-          target.groupBy = target.groupBy || [{ type: 'time', params: ['$interval'] }, { type: 'fill', params: ['null'] }];
+          target.groupBy = target.groupBy || [{ type: 'time', params: ['$__interval'] }, { type: 'fill', params: ['null'] }];
           target.select = target.select || [[{ type: 'field', params: ['value'] }, { type: 'mean', params: [] }]];
 
           this.updateProjection();
         }
 
-        _createClass(EneInfluxQuery, [{
+        _createClass(InfluxQuery, [{
           key: 'updateProjection',
           value: function updateProjection() {
             this.selectModels = _.map(this.target.select, function (parts) {
@@ -174,7 +174,7 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
         }, {
           key: 'renderTagCondition',
           value: function renderTagCondition(tag, index, interpolate) {
-            var str = "";
+            var str = '';
             var operator = tag.operator;
             var value = tag.value;
             if (index > 0) {
@@ -209,7 +209,7 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
             var policy = this.target.policy;
             var measurement = this.target.measurement || 'measurement';
 
-            if (!measurement.match('^/.*/')) {
+            if (!measurement.match('^/.*/$')) {
               measurement = '"' + measurement + '"';
             } else if (interpolate) {
               measurement = this.templateSrv.replace(measurement, this.scopedVars, 'regex');
@@ -218,7 +218,7 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
             if (policy !== 'default') {
               policy = '"' + this.target.policy + '".';
             } else {
-              policy = "";
+              policy = '';
             }
 
             return policy + measurement;
@@ -236,7 +236,7 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
             }
 
             var escapedValues = _.map(value, kbn.regexEscape);
-            return escapedValues.join('|');
+            return '(' + escapedValues.join('|') + ')';
           }
         }, {
           key: 'render',
@@ -257,7 +257,7 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
             var i, y;
             for (i = 0; i < this.selectModels.length; i++) {
               var parts = this.selectModels[i];
-              var selectText = "";
+              var selectText = '';
               for (y = 0; y < parts.length; y++) {
                 var _part = parts[y];
                 selectText = _part.render(selectText);
@@ -274,10 +274,13 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
               return _this.renderTagCondition(tag, index, interpolate);
             });
 
-            query += conditions.join(' ');
-            query += (conditions.length > 0 ? ' AND ' : '') + '$timeFilter';
+            if (conditions.length > 0) {
+              query += '(' + conditions.join(' ') + ') AND ';
+            }
 
-            var groupBySection = "";
+            query += '$timeFilter';
+
+            var groupBySection = '';
             for (i = 0; i < this.groupByParts.length; i++) {
               var part = this.groupByParts[i];
               if (i > 0) {
@@ -295,6 +298,18 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
               query += ' fill(' + target.fill + ')';
             }
 
+            if (target.orderByTime === 'DESC') {
+              query += ' ORDER BY time DESC';
+            }
+
+            if (target.limit) {
+              query += ' LIMIT ' + target.limit;
+            }
+
+            if (target.slimit) {
+              query += ' SLIMIT ' + target.slimit;
+            }
+
             return query;
           }
         }, {
@@ -309,10 +324,10 @@ System.register(['lodash', './query_part', 'app/core/utils/kbn'], function (_exp
           }
         }]);
 
-        return EneInfluxQuery;
+        return InfluxQuery;
       }();
 
-      _export('default', EneInfluxQuery);
+      _export('default', InfluxQuery);
     }
   };
 });

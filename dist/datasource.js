@@ -1,9 +1,9 @@
 'use strict';
 
-System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_series', './influx_query', './response_parser', './query_builder'], function (_export, _context) {
+System.register(['lodash', 'app/core/utils/datemath', './influx_series', './influx_query', './response_parser', './query_builder'], function (_export, _context) {
   "use strict";
 
-  var angular, _, dateMath, EneInfluxSeries, EneInfluxQuery, EneResponseParser, EneInfluxQueryBuilder, _createClass, EneInfluxDatasource;
+  var _, dateMath, InfluxSeries, InfluxQuery, ResponseParser, InfluxQueryBuilder, _createClass, EnesaInfluxDatasource;
 
   function _classCallCheck(instance, Constructor) {
     if (!(instance instanceof Constructor)) {
@@ -12,20 +12,18 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
   }
 
   return {
-    setters: [function (_angular) {
-      angular = _angular.default;
-    }, function (_lodash) {
+    setters: [function (_lodash) {
       _ = _lodash.default;
     }, function (_appCoreUtilsDatemath) {
       dateMath = _appCoreUtilsDatemath;
     }, function (_influx_series) {
-      EneInfluxSeries = _influx_series.default;
+      InfluxSeries = _influx_series.default;
     }, function (_influx_query) {
-      EneInfluxQuery = _influx_query.default;
+      InfluxQuery = _influx_query.default;
     }, function (_response_parser) {
-      EneResponseParser = _response_parser.default;
+      ResponseParser = _response_parser.default;
     }, function (_query_builder) {
-      EneInfluxQueryBuilder = _query_builder.default;
+      InfluxQueryBuilder = _query_builder.InfluxQueryBuilder;
     }],
     execute: function () {
       _createClass = function () {
@@ -46,42 +44,43 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
         };
       }();
 
-      EneInfluxDatasource = function () {
+      EnesaInfluxDatasource = function () {
 
         /** @ngInject */
-        function EneInfluxDatasource(instanceSettings, $q, backendSrv, templateSrv) {
-          _classCallCheck(this, EneInfluxDatasource);
-
-          this.$q = $q;
-          this.backendSrv = backendSrv;
-          this.templateSrv = templateSrv;
+        function EnesaInfluxDatasource(instanceSettings, $q, backendSrv, templateSrv) {
+          _classCallCheck(this, EnesaInfluxDatasource);
 
           this.type = 'influxdb';
           this.urls = _.map(instanceSettings.url.split(','), function (url) {
             return url.trim();
           });
 
+          this.$q = $q;
+          this.instanceSettings = instanceSettings;
+          this.backendSrv = backendSrv;
+          this.templateSrv = templateSrv;
+
           var jsonData = instanceSettings.jsonData || {};
 
           this.username = jsonData.username;
           this.password = jsonData.password;
-          this.name = instanceSettings.name;
           this.database = jsonData.database;
+          this.name = instanceSettings.name;
           this.basicAuth = instanceSettings.basicAuth;
           this.withCredentials = instanceSettings.withCredentials;
-          this.interval = jsonData.timeInterval;
+          this.interval = (instanceSettings.jsonData || {}).timeInterval;
           this.supportAnnotations = true;
           this.supportMetrics = true;
-          this.responseParser = new EneResponseParser();
+          this.responseParser = new ResponseParser();
         }
 
-        _createClass(EneInfluxDatasource, [{
+        _createClass(EnesaInfluxDatasource, [{
           key: 'query',
           value: function query(options) {
             var _this = this;
 
             var timeFilter = this.getTimeFilter(options);
-            var scopedVars = options.scopedVars ? _.cloneDeep(options.scopedVars) : {};
+            var scopedVars = options.scopedVars;
             var targets = _.cloneDeep(options.targets);
             var queryTargets = [];
             var queryModel;
@@ -89,19 +88,19 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
 
             var allQueries = _.map(targets, function (target) {
               if (target.hide) {
-                return "";
+                return '';
               }
 
               queryTargets.push(target);
 
-              // build query
-              scopedVars.interval = { value: target.interval || options.interval };
+              // backward compatability
+              scopedVars.interval = scopedVars.__interval;
 
-              queryModel = new EneInfluxQuery(target, _this.templateSrv, scopedVars);
+              queryModel = new InfluxQuery(target, _this.templateSrv, scopedVars);
               return queryModel.render(true);
             }).reduce(function (acc, current) {
-              if (current !== "") {
-                acc += ";" + current;
+              if (current !== '') {
+                acc += ';' + current;
               }
               return acc;
             });
@@ -140,7 +139,10 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
                   alias = _this.templateSrv.replace(target.alias, options.scopedVars);
                 }
 
-                var influxSeries = new EneInfluxSeries({ series: data.results[i].series, alias: alias });
+                var influxSeries = new InfluxSeries({
+                  series: data.results[i].series,
+                  alias: alias
+                });
 
                 switch (target.resultFormat) {
                   case 'table':
@@ -166,7 +168,9 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
           key: 'annotationQuery',
           value: function annotationQuery(options) {
             if (!options.annotation.query) {
-              return this.$q.reject({ message: 'Query missing in annotation definition' });
+              return this.$q.reject({
+                message: 'Query missing in annotation definition'
+              });
             }
 
             var timeFilter = this.getTimeFilter({ rangeRaw: options.rangeRaw });
@@ -177,7 +181,10 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
               if (!data || !data.results || !data.results[0]) {
                 throw { message: 'No results in response from InfluxDB' };
               }
-              return new EneInfluxSeries({ series: data.results[0].series, annotation: options.annotation }).getAnnotations();
+              return new InfluxSeries({
+                series: data.results[0].series,
+                annotation: options.annotation
+              }).getAnnotations();
             });
           }
         }, {
@@ -250,14 +257,14 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
         }, {
           key: 'getTagKeys',
           value: function getTagKeys(options) {
-            var queryBuilder = new EneInfluxQueryBuilder({ measurement: '', tags: [] }, this.database);
+            var queryBuilder = new InfluxQueryBuilder({ measurement: '', tags: [] }, this.database);
             var query = queryBuilder.buildExploreQuery('TAG_KEYS');
             return this.metricFindQuery(query);
           }
         }, {
           key: 'getTagValues',
           value: function getTagValues(options) {
-            var queryBuilder = new EneInfluxQueryBuilder({ measurement: '', tags: [] }, this.database);
+            var queryBuilder = new InfluxQueryBuilder({ measurement: '', tags: [] }, this.database);
             var query = queryBuilder.buildExploreQuery('TAG_VALUES', options.key);
             return this.metricFindQuery(query);
           }
@@ -283,13 +290,22 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
               }
               memo.push(encodeURIComponent(key) + '=' + encodeURIComponent(value));
               return memo;
-            }, []).join("&");
+            }, []).join('&');
           }
         }, {
           key: 'testDatasource',
           value: function testDatasource() {
-            return this.metricFindQuery('SHOW MEASUREMENTS LIMIT 1').then(function () {
-              return { status: "success", message: "Data source is working", title: "Success" };
+            var queryBuilder = new InfluxQueryBuilder({ measurement: '', tags: [] }, this.database);
+            var query = queryBuilder.buildExploreQuery('RETENTION POLICIES');
+
+            return this._seriesQuery(query).then(function (res) {
+              var error = _.get(res, 'results[0].error');
+              if (error) {
+                return { status: 'error', message: error };
+              }
+              return { status: 'success', message: 'Data source is working' };
+            }).catch(function (err) {
+              return { status: 'error', message: err.message };
             });
           }
         }, {
@@ -300,10 +316,12 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
             var currentUrl = self.urls.shift();
             self.urls.push(currentUrl);
 
-            var params = {
-              u: self.username,
-              p: self.password
-            };
+            var params = {};
+
+            if (self.username) {
+              params.u = self.username;
+              params.p = self.password;
+            }
 
             if (self.database) {
               params.db = self.database;
@@ -319,7 +337,7 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
               url: currentUrl + url,
               params: params,
               data: data,
-              precision: "ms",
+              precision: 'ms',
               inspect: { type: 'influxdb' },
               paramSerializer: this.serializeParams
             };
@@ -337,9 +355,17 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
             }, function (err) {
               if (err.status !== 0 || err.status >= 300) {
                 if (err.data && err.data.error) {
-                  throw { message: 'InfluxDB Error Response: ' + err.data.error, data: err.data, config: err.config };
+                  throw {
+                    message: 'InfluxDB Error: ' + err.data.error,
+                    data: err.data,
+                    config: err.config
+                  };
                 } else {
-                  throw { message: 'InfluxDB Error: ' + err.message, data: err.data, config: err.config };
+                  throw {
+                    message: 'Network Error: ' + err.statusText + '(' + err.status + ')',
+                    data: err.data,
+                    config: err.config
+                  };
                 }
               }
             });
@@ -349,13 +375,13 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
           value: function getTimeFilter(options) {
             var from = this.getInfluxTime(options.rangeRaw.from, false);
             var until = this.getInfluxTime(options.rangeRaw.to, true);
-            var fromIsAbsolute = from[from.length - 1] === 's';
+            var fromIsAbsolute = from[from.length - 1] === 'ms';
 
             if (until === 'now()' && !fromIsAbsolute) {
-              return 'time > ' + from;
+              return 'time >= ' + from;
             }
 
-            return 'time > ' + from + ' and time < ' + until;
+            return 'time >= ' + from + ' and time <= ' + until;
           }
         }, {
           key: 'getInfluxTime',
@@ -373,14 +399,15 @@ System.register(['angular', 'lodash', 'app/core/utils/datemath', './influx_serie
               }
               date = dateMath.parse(date, roundUp);
             }
-            return (date.valueOf() / 1000).toFixed(0) + 's';
+
+            return date.valueOf() + 'ms';
           }
         }]);
 
-        return EneInfluxDatasource;
+        return EnesaInfluxDatasource;
       }();
 
-      _export('default', EneInfluxDatasource);
+      _export('default', EnesaInfluxDatasource);
     }
   };
 });
